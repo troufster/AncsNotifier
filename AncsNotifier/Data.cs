@@ -53,10 +53,16 @@ namespace AncsNotifier
     public struct NotificationActionData
     {
         public byte CommandId;
-        public UInt32 NotificationUID;
-        public byte ActionId;
+        public UInt32 NotificationUID;  
+        public ActionId ActionId;
     }
 
+    public enum ActionId : byte
+    {
+        Positive = 0,
+        Negative = 1
+        //2-255 reserved
+    }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct GetNotificationAttributesData
@@ -89,4 +95,6 @@ namespace AncsNotifier
 
         public bool Negative => EventFlags != null && EventFlags.Value.HasFlag(AncsNotifier.EventFlags.EventFlagNegativeAction);
     }
+
+
 }

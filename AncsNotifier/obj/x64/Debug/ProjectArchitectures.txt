@@ -1,1 +1,0 @@
-C:\Users\Stefan Pataky\Documents\Visual Studio 2015\Projects\AncsNotifier\AncsNotifier\AncsNotifier.csproj;x64

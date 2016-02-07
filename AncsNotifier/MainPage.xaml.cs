@@ -143,11 +143,15 @@ namespace AncsNotifier
         private void ButtonPositive_OnClick(object sender, RoutedEventArgs e)
         {
             var not = (PlainNotification)((Button)sender).DataContext;
+
+            this.AncsManager.OnAction(not, true);
         }
 
         private void ButtonNegative_OnClick(object sender, RoutedEventArgs e)
         {
             var not = (PlainNotification)((Button)sender).DataContext;
+
+            this.AncsManager.OnAction(not, false);
         }
     }
 }

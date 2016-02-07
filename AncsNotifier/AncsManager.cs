@@ -37,6 +37,32 @@ namespace AncsNotifier
         public AncsManager()
         {         
             OnUpdate = OnUpdateReceived;
+
+        }
+
+        public async void OnAction(PlainNotification notification, bool positive)
+        {
+            //Relay notification action back to device
+            var not = new NotificationActionData
+            {
+                CommandId = 0x02, //CommandIDPerformNotificationAction
+                NotificationUID = notification.Uid,
+                ActionId =  positive ? ActionId.Positive : ActionId.Negative
+            };
+
+            var bytes = StructureToByteArray(not);
+
+            try
+            {
+                var status =
+                    await
+                        this.ControlPointCharacteristic.WriteValueAsync(bytes.AsBuffer(),
+                            GattWriteOption.WriteWithResponse);
+            }
+            catch (Exception)
+            {
+
+            }
         }
 
         private void OnUpdateReceived(IActivatedEventArgs activatedEventArgs)
