@@ -7,6 +7,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Activation;
+using Windows.ApplicationModel.Background;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
@@ -86,8 +87,9 @@ namespace AncsNotifier
             this.NotificationSourceCharacteristic = this.AncsService.GetCharacteristics(_notificationSourceCharacteristicUuid).First();
             this.ControlPointCharacteristic = this.AncsService.GetCharacteristics(_controlPointCharacteristicUuid).First();
             this.DataSourceCharacteristic = this.AncsService.GetCharacteristics(_dataSourceCharacteristicUuid).First();
-
         }
+
+        public BackgroundTaskRegistration BackgroundNotifierRegistration { get; set; }
 
         private async void DeviceOnConnectionStatusChanged(BluetoothLEDevice device, object args)
         {

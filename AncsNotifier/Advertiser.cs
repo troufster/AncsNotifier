@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Devices.Bluetooth.Advertisement;
+using Windows.Storage.Streams;
+using Buffer = Windows.Storage.Streams.Buffer;
 
 namespace AncsNotifier
 {
@@ -14,7 +19,7 @@ namespace AncsNotifier
                 //Solicitation
                 0x11,
                 0x15, //GAP_ADTYPE_SERVICES_LIST_128BIT
-                // ANCS service UUID
+                // ANCS service UUID (little endian)
                 0xD0, 0x00, 0x2D, 0x12, 0x1E, 0x4B, 0x0F, 0xA4, 0x99, 0x4E, 0xCE, 0xB5, 0x31, 0xF4, 0x05, 0x79
             };
 
@@ -23,19 +28,29 @@ namespace AncsNotifier
         private readonly BluetoothLEAdvertisementPublisher _publisher;
 
         public Advertiser()
-        {
-            var manufacturerData = new BluetoothLEManufacturerData(ManufacturerId, SolicitationData.AsBuffer());
+        {        
+            var manufacturerData = new BluetoothLEManufacturerData(ManufacturerId, (new byte[] { 0x12, 0x34 }).AsBuffer());
 
             var advertisment = new BluetoothLEAdvertisement();
 
+            var data = new BluetoothLEAdvertisementDataSection {Data = SolicitationData.AsBuffer()};
+
+            advertisment.DataSections.Add(data);
             advertisment.ManufacturerData.Add(manufacturerData);
 
             this._publisher = new BluetoothLEAdvertisementPublisher(advertisment);
         }
 
         public void Advertise()
-        {         
-            this._publisher.Start();
+        {
+            try
+            {
+                this._publisher.Start();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
     }
 }

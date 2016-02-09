@@ -28,14 +28,9 @@ namespace AncsNotifier
     /// </summary>
     public sealed partial class MainPage : Page
     {
-
-
         public Advertiser Advertiser { get; set; }
         public AncsManager AncsManager { get; set; }
-        public ObservableCollection<PlainNotification> DataList = new ObservableCollection<PlainNotification>();
-
-
-       
+        public ObservableCollection<PlainNotification> DataList = new ObservableCollection<PlainNotification>();    
 
         public MainPage()
         {
@@ -43,7 +38,6 @@ namespace AncsNotifier
 
             listView.ItemsSource = DataList;
          
-
 ;           this.Advertiser = new Advertiser();
             this.AncsManager = new AncsManager();
 
@@ -93,8 +87,7 @@ namespace AncsNotifier
                 Actions = new ToastActionsCustom()
                 {
                     Buttons =
-                    {
-                     
+                    {               
                        new ToastButtonDismiss("Ok")
                     }
                 }
