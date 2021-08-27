@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -76,64 +77,113 @@ namespace AncsNotifier
             //Find a device that is advertising the ancs service uuid
             var serviceDeviceSelector = GattDeviceService.GetDeviceSelectorFromUuid(_ancsServiceUiid);
             var devices = await DeviceInformation.FindAllAsync(serviceDeviceSelector, null);
-            this.AncsDevice = devices.First();
+            AncsDevice = devices[0];
+
+            string deviceid = this.AncsDevice.Id;
 
             //Resolve the service
-            this.AncsService = await GattDeviceService.FromIdAsync(this.AncsDevice.Id);
+            this.AncsService = await GattDeviceService.FromIdAsync(deviceid);
 
-            this.AncsService.Device.ConnectionStatusChanged += DeviceOnConnectionStatusChanged;
+            //this.AncsService.Device.ConnectionStatusChanged += DeviceOnConnectionStatusChanged;
+            AncsService.Session.SessionStatusChanged += iDeviceOnConnectionStatusChanged;
 
             //Get charasteristics of service
-            this.NotificationSourceCharacteristic = this.AncsService.GetCharacteristics(_notificationSourceCharacteristicUuid).First();
-            this.ControlPointCharacteristic = this.AncsService.GetCharacteristics(_controlPointCharacteristicUuid).First();
-            this.DataSourceCharacteristic = this.AncsService.GetCharacteristics(_dataSourceCharacteristicUuid).First();
+            var ret = await this.AncsService.GetCharacteristicsForUuidAsync(_notificationSourceCharacteristicUuid);
+            this.NotificationSourceCharacteristic = ret.Characteristics[0];
+
+            ret = await AncsService.GetCharacteristicsForUuidAsync(_controlPointCharacteristicUuid);
+            this.ControlPointCharacteristic = ret.Characteristics[0];
+
+            ret = await AncsService.GetCharacteristicsForUuidAsync(_dataSourceCharacteristicUuid);
+            DataSourceCharacteristic = ret.Characteristics[0];
         }
 
-        public BackgroundTaskRegistration BackgroundNotifierRegistration { get; set; }
-
-        private async void DeviceOnConnectionStatusChanged(BluetoothLEDevice device, object args)
+        private async void iDeviceOnConnectionStatusChanged(GattSession sender, GattSessionStatusChangedEventArgs args)
         {
-            if (device.ConnectionStatus == BluetoothConnectionStatus.Connected)
+            if (sender.SessionStatus.Equals(GattSessionStatus.Active))
             {
                 //Get stuff up and running
-                OnStatusChange?.Invoke("Connected");           
+                OnStatusChange?.Invoke("Connected");
 
-                if (
-                    this.NotificationSourceCharacteristic.CharacteristicProperties.HasFlag(
-                        GattCharacteristicProperties.Notify))
+                //if (
+                //    this.NotificationSourceCharacteristic.CharacteristicProperties.HasFlag(
+                //        GattCharacteristicProperties.Notify))
+                //{
+                //    this.NotificationSourceCharacteristic.ValueChanged += NotificationSourceCharacteristicOnValueChanged;
+
+                //    // Set the notify enable flag
+                //    try
+                //    {
+                //        await
+                //            this.NotificationSourceCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+                //                GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                //    }
+                //    catch (Exception ex)
+                //    {
+
+                //    }
+                //}
+
+                //this.DataSourceCharacteristic.ValueChanged += DataSourceCharacteristicOnValueChanged;
+                //await
+                //    this.DataSourceCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+                //        GattClientCharacteristicConfigurationDescriptorValue.Notify);
+
+
+
+
+                // initialize status
+                GattCommunicationStatus status = GattCommunicationStatus.Unreachable;
+                var cccdValue = GattClientCharacteristicConfigurationDescriptorValue.None;
+                if (NotificationSourceCharacteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Indicate))
+                {
+                    cccdValue = GattClientCharacteristicConfigurationDescriptorValue.Indicate;
+                }
+
+                else if (NotificationSourceCharacteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
+                {
+                    cccdValue = GattClientCharacteristicConfigurationDescriptorValue.Notify;
+                }
+
+                try
                 {
                     this.NotificationSourceCharacteristic.ValueChanged += NotificationSourceCharacteristicOnValueChanged;
 
-                    // Set the notify enable flag
-                    try
-                    {
-                        await
-                            this.NotificationSourceCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-                                GattClientCharacteristicConfigurationDescriptorValue.Notify);
-                    }
-                    catch (Exception ex)
-                    {
+                    // BT_Code: Must write the CCCD in order for server to send indications.
+                    // We receive them in the ValueChanged event handler.
+                    status = await NotificationSourceCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(cccdValue);
 
+                    if (status == GattCommunicationStatus.Success)
+                    {
+                        this.DataSourceCharacteristic.ValueChanged += DataSourceCharacteristicOnValueChanged;
+                    }
+                    else
+                    {
+                        //rootPage.NotifyUser($"Error registering for value changes: {status}", NotifyType.ErrorMessage);
                     }
                 }
-
-                this.DataSourceCharacteristic.ValueChanged += DataSourceCharacteristicOnValueChanged;
-                await
-                    this.DataSourceCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-                        GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                catch (UnauthorizedAccessException ex)
+                {
+                    // This usually happens when a device reports that it support indicate, but it actually doesn't.
+                    //rootPage.NotifyUser(ex.Message, NotifyType.ErrorMessage);
+                }
             }
-
-            if (device.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
+            else
             {
                 //Stop doing stuff
                 this.DataSourceCharacteristic.ValueChanged -= DataSourceCharacteristicOnValueChanged;
                 this.NotificationSourceCharacteristic.ValueChanged -= NotificationSourceCharacteristicOnValueChanged;
 
                 OnStatusChange?.Invoke("Disconnected");
+
             }
         }
 
-        private async void DataSourceCharacteristicOnValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
+        public BackgroundTaskRegistration BackgroundNotifierRegistration { get; set; }
+
+        
+
+        private void DataSourceCharacteristicOnValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
         {
             var stream = args.CharacteristicValue.AsStream();
             var br = new BinaryReader(stream);
