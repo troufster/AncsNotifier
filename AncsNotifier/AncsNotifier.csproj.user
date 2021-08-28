@@ -2,6 +2,6 @@
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <AuthenticationMode>Windows</AuthenticationMode>
-    <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
 </Project>
